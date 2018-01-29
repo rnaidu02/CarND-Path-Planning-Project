@@ -206,13 +206,13 @@ int main() {
   // Ref ref_velocity
   double target_velocity = 50.0;
   // Increment step of the velocity
-  double increment_Step = 0.25;
+  double increment_Step = 0.224;
 
   // Have reference velocoty (little less than target velocity of 50 mph)
   // This is essentially 50  -  2 * setp increment in velocity
-  double ref_velocity = 49.5; //target_velocity - 2* increment_Step;
+  double ref_velocity = 0.0; //target_velocity - 2* increment_Step;
 
-  h.onMessage([&ref_velocity, &lane, &map_waypoints_x,&map_waypoints_y,&map_waypoints_s,&map_waypoints_dx,&map_waypoints_dy](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
+  h.onMessage([&target_velocity, &increment_Step, &ref_velocity, &lane, &map_waypoints_x,&map_waypoints_y,&map_waypoints_s,&map_waypoints_dx,&map_waypoints_dy](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
                      uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
     // The 4 signifies a websocket message
@@ -301,9 +301,16 @@ int main() {
                 if ( (check_car_s > car_s) && (check_car_s-car_s< 30.0)){
 
                   // Do somethig here, for now reduce the speed
-                  ref_velocity = 29.5; //mph
+                  // ref_velocity = 29.5; //mph
+                  bIsTooClose = true;
                 }
               }
+            }
+
+            if (bIsTooClose){
+              ref_velocity -= increment_Step; //
+            }else if (ref_velocity < (target_velocity-2*increment_Step)){
+              ref_velocity += increment_Step;
             }
 
             if (prev_path_size < 2){
