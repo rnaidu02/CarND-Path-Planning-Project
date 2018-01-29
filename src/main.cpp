@@ -275,6 +275,37 @@ int main() {
             //  prev path list sent from the simulator
             int prev_path_size = previous_path_x.size();
 
+            // Check for sensor fusion data to find out all the cars that are
+            // on the road within the vicinity
+            if (prev_path_size > 0){
+              car_s = end_path_s;
+            }
+
+            bool bIsTooClose = false;
+
+            // Traverse thru all of the vehicles on the road
+            for (int i = 0; i < sensor_fusion.size(); i++){
+              //Find if each car is in the same lane as this car
+              // Vehicle data id, veh_x, veh_y, vel_x, vel_y, veh_s, veh_d
+              float d = sensor_fusion[i][6];
+              if ((d < (2+4*lane+2)) && (d > (2+4*lane-2))){
+                double vx = sensor_fusion[i][3];
+                double vy = sensor_fusion[i][4];
+                double check_speed = sqrt(vx*vx+vy*vy);
+                double check_car_s = sensor_fusion[i][5];
+
+                // Look into the future where this vehicle will be
+                check_car_s += (((double)prev_path_size)*.02*check_speed);
+
+                // Check if s of this vehicle is atleast 30 m from the car_righ
+                if ( (check_car_s > car_s) && (check_car_s-car_s< 30.0)){
+
+                  // Do somethig here, for now reduce the speed
+                  ref_velocity = 29.5; //mph
+                }
+              }
+            }
+
             if (prev_path_size < 2){
               // Use the two points - one unit forward tangent to the existing car pos, car pos
               double prev_car_x = car_x - cos(car_yaw);
