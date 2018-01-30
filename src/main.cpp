@@ -220,6 +220,47 @@ vector <bool> predictCarsInLanes(const vector<vector<double>> &sensor_fusion, in
     return vResult;
 }
 
+int returnChangedLanewithUpdatedSpeed(int current_lane, vector <bool> &lane_occupancy, double &ref_velocity, double target_velocity, double increment_Step){
+  // Act on the predctions
+  int new_lane = current_lane;
+
+  // See if there is a vehicle in the same lane in the front
+  if (lane_occupancy[current_lane]){
+    // See if there is no vehicle on the left or right for lane Change
+    if (current_lane < 1) { // Only right lane change possible
+      // Check if there is no vehicle on the right lane
+      if (!lane_occupancy[current_lane+1])
+        new_lane = current_lane+1;
+    }
+    else
+      ref_velocity -= increment_Step; // decrease the speed if no lane change allowed and vehicle in the front
+
+    if (current_lane == 1) { // If it is in the middle lane - can change to either lanes
+      // Check if there is no vehicle on the right lane
+      if (!lane_occupancy[current_lane+1])
+        new_lane = current_lane+1;
+      // Check if there is no vehicle on the left lane
+      else if (!lane_occupancy[current_lane-1])
+        new_lane = current_lane-1;
+      else  ref_velocity -= increment_Step; // decrease the speed if no lane change allowed and vehicle in the front
+
+    }
+
+    if (current_lane > 1) { // Only left lane change possible
+      // Check if there is no vehicle on the left lane
+      if (!lane_occupancy[current_lane-1])
+        new_lane = current_lane-1;
+    }
+    else
+      ref_velocity -= increment_Step; // decrease the speed if no lane change allowed and vehicle in the front
+
+  }else if (ref_velocity < (target_velocity-2*increment_Step)){
+    ref_velocity += increment_Step;
+  }
+
+  return new_lane;
+}
+
 int main() {
   uWS::Hub h;
 
@@ -373,10 +414,6 @@ int main() {
                 }
               } // Loop to detect if the vehicle is in the same lane as the car
             }
-*/
-            // Predict the lanes occupancy information within 30 m reach
-            vector <bool> lanes_tracking = predictCarsInLanes(sensor_fusion, lane, prev_path_size, car_s);
-            cout << "Lanes TRacking vector size " << lanes_tracking.size() << " with values " << lanes_tracking[0] << " " <<  lanes_tracking[1] << " " << lanes_tracking[2] << " " << endl;
 
             // Act on the predctions
             if (lanes_tracking[lane]){
@@ -384,6 +421,16 @@ int main() {
             }else if (ref_velocity < (target_velocity-2*increment_Step)){
               ref_velocity += increment_Step;
             }
+*/
+            // Predict the lanes occupancy information within 30 m reach
+            vector <bool> lanes_tracking = predictCarsInLanes(sensor_fusion, lane, prev_path_size, car_s);
+            cout << "Lanes TRacking vector size " << lanes_tracking.size() << " with values " << lanes_tracking[0] << " " <<  lanes_tracking[1] << " " << lanes_tracking[2] << " " << endl;
+
+            int new_lane = returnChangedLanewithUpdatedSpeed(lane, lanes_tracking, ref_velocity, target_velocity, increment_Step);
+            if (new_lane != lane)
+              cout << "Lane changed from " << lane << " to " << new_lane << endl;
+
+            lane = new_lane;
 
             if (prev_path_size < 2){
               // Use the two points - one unit forward tangent to the existing car pos, car pos
@@ -444,9 +491,9 @@ int main() {
             }
 
             // Debug
-            for (int d = 0; d < ptsx.size(); d++){
-              std::cout << "ptsx " << d << " = " << ptsx[d] << endl;
-            }
+            // for (int d = 0; d < ptsx.size(); d++){
+            //   std::cout << "ptsx " << d << " = " << ptsx[d] << endl;
+            // }
 
             // Create the spline
             tk::spline s;
