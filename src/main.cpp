@@ -163,6 +163,62 @@ vector<double> getXY(double s, double d, const vector<double> &maps_s, const vec
 	return {x,y};
 
 }
+/*
+  * Predict if there are cars within 30m vicinity in left, middle and right predictCarsInLanes
+  * 0, 1, 2 index represent Left, Middle and Right lanes respectively
+*/
+vector <bool> predictCarsInLanes(const vector<vector<double>> &sensor_fusion, int current_lane, int prev_path_size, double car_s, double range = 30.0){
+    std::vector<bool> vResult;
+    vResult.push_back(false);
+    vResult.push_back(false);
+    vResult.push_back(false);
+
+    cout << "Size = " << sensor_fusion.size() << endl;
+
+    // Traverse thru all of the vehicles on the road
+    // cout << "Sensor fusion list size = " << returnSensorFusionSize(sensor_fusion) << endl;
+    for (int i = 0; i < sensor_fusion.size(); i++){
+      //Find if each car is in the same lane as this car
+      // Vehicle data id, veh_x, veh_y, vel_x, vel_y, veh_s, veh_d
+      float d = sensor_fusion[i][6];
+
+      double vx = sensor_fusion[i][3];
+      double vy = sensor_fusion[i][4];
+      double check_speed = sqrt(vx*vx+vy*vy);
+      double check_car_s = sensor_fusion[i][5];
+
+      // Look into the future where this vehicle will be forward in prev_path_size steps
+      // Simlator goes 50 steps in one sec (1 step  = 1/50 sec)
+      check_car_s += (((double)prev_path_size)*.02*check_speed);
+
+      // for each lane index 0, 1, 2
+      for (int j = 0; j < 3; j++){
+        // Find the vehicle lane
+        if ((d < (2+4*j+2)) && (d > (2+4*j-2))){
+
+          // If the car and the sensor vehicle in the same lane
+          if (j == current_lane){
+            // Check if s of this vehicle is atleast 30 m from the ahead only
+            if ( (check_car_s > car_s) && (check_car_s-car_s< range)){
+              // Do somethig here, for now reduce the speed
+              // ref_velocity = 29.5; //mph
+              // bIsTooClose = true;
+              vResult[j] = true;
+            }
+          } else {
+            // This vehicle is in different lane compared to the car
+            // Check if the vehicle is within 30 m so that it is not safe
+            // to change the lane
+            if ((check_car_s < car_s+ range) && (-check_car_s+car_s< range)){
+              vResult[j] = true;
+            }
+          }
+        } // Loop to detect if the vehicle is in the same lane as the car
+      }
+    }
+
+    return vResult;
+}
 
 int main() {
   uWS::Hub h;
@@ -277,24 +333,31 @@ int main() {
 
             // Check for sensor fusion data to find out all the cars that are
             // on the road within the vicinity
+
+            // Get the current poistion of the car
             if (prev_path_size > 0){
               car_s = end_path_s;
             }
 
             bool bIsTooClose = false;
 
+/*
             // Traverse thru all of the vehicles on the road
+            // cout << "Sensor fusion list size = " << returnSensorFusionSize(sensor_fusion) << endl;
             for (int i = 0; i < sensor_fusion.size(); i++){
               //Find if each car is in the same lane as this car
               // Vehicle data id, veh_x, veh_y, vel_x, vel_y, veh_s, veh_d
               float d = sensor_fusion[i][6];
+
+              // Find the vehicle lane
               if ((d < (2+4*lane+2)) && (d > (2+4*lane-2))){
                 double vx = sensor_fusion[i][3];
                 double vy = sensor_fusion[i][4];
                 double check_speed = sqrt(vx*vx+vy*vy);
                 double check_car_s = sensor_fusion[i][5];
 
-                // Look into the future where this vehicle will be
+                // Look into the future where this vehicle will be forward in prev_path_size steps
+                // Simlator goes 50 steps in one sec (1 step  = 1/50 sec)
                 check_car_s += (((double)prev_path_size)*.02*check_speed);
 
                 // Check if s of this vehicle is atleast 30 m from the car_righ
@@ -303,11 +366,20 @@ int main() {
                   // Do somethig here, for now reduce the speed
                   // ref_velocity = 29.5; //mph
                   bIsTooClose = true;
-                }
-              }
-            }
 
-            if (bIsTooClose){
+                  if (lane > 0){
+                    lane = 0;
+                  }
+                }
+              } // Loop to detect if the vehicle is in the same lane as the car
+            }
+*/
+            // Predict the lanes occupancy information within 30 m reach
+            vector <bool> lanes_tracking = predictCarsInLanes(sensor_fusion, lane, prev_path_size, car_s);
+            cout << "Lanes TRacking vector size " << lanes_tracking.size() << " with values " << lanes_tracking[0] << " " <<  lanes_tracking[1] << " " << lanes_tracking[2] << " " << endl;
+
+            // Act on the predctions
+            if (lanes_tracking[lane]){
               ref_velocity -= increment_Step; //
             }else if (ref_velocity < (target_velocity-2*increment_Step)){
               ref_velocity += increment_Step;
@@ -361,9 +433,11 @@ int main() {
             // Convert the co-rodinates to car co-ordinate system
             for (int i = 0; i < ptsx.size(); i ++){
               // Make car reference position and angle to 0
+              // Shift
               double shift_x = ptsx[i] - ref_x;
               double shift_y = ptsy[i] - ref_y;
 
+              // Rotation
               ptsx[i] = shift_x * cos(0-ref_yaw) - shift_y * sin(0- ref_yaw);
               ptsy[i] = shift_x * sin(0-ref_yaw) + shift_y * cos(0-ref_yaw);
 
