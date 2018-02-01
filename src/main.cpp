@@ -198,7 +198,7 @@ vector <bool> predictCarsInLanes(const vector<vector<double>> &sensor_fusion, in
 
           // If the car and the sensor vehicle in the same lane
           if (j == current_lane){
-            // Check if s of this vehicle is atleast 30 m from the ahead only
+            // Check if s of this vehicle is atleast 30 m ahead only
             if ( (check_car_s > car_s) && (check_car_s-car_s< range)){
               // Do somethig here, for now reduce the speed
               // ref_velocity = 29.5; //mph
@@ -223,33 +223,39 @@ vector <bool> predictCarsInLanes(const vector<vector<double>> &sensor_fusion, in
 int returnChangedLanewithUpdatedSpeed(int current_lane, vector <bool> &lane_occupancy, double &ref_velocity, double target_velocity, double increment_Step){
   // Act on the predctions
   int new_lane = current_lane;
+  const int MIDDLE_LANE = 1;
+  const int LANE_SHIFT = 1;
 
   // See if there is a vehicle in the same lane in the front
   if (lane_occupancy[current_lane]){
     // See if there is no vehicle on the left or right for lane Change
-    if (current_lane < 1) { // Only right lane change possible
-      // Check if there is no vehicle on the right lane
-      if (!lane_occupancy[current_lane+1])
-        new_lane = current_lane+1;
+    if (current_lane < MIDDLE_LANE) { // Only right lane change possible
+      // Check if there is no vehicle on the right side lane of the current lane
+      if (!lane_occupancy[current_lane+LANE_SHIFT])
+        //Change the lane to the right
+        new_lane = current_lane+LANE_SHIFT;
     }
     else
-      ref_velocity -= increment_Step; // decrease the speed if no lane change allowed and vehicle in the front
+      ref_velocity -= increment_Step; // decrease the speed if no lane change allowed and vehicle is in the front
 
-    if (current_lane == 1) { // If it is in the middle lane - can change to either lanes
-      // Check if there is no vehicle on the right lane
-      if (!lane_occupancy[current_lane+1])
-        new_lane = current_lane+1;
-      // Check if there is no vehicle on the left lane
-      else if (!lane_occupancy[current_lane-1])
-        new_lane = current_lane-1;
+    if (current_lane == MIDDLE_LANE) { // If it is in the middle lane - can change to either lanes
+      // Check if there is no vehicle on the right side lane of the current lane
+      if (!lane_occupancy[current_lane+LANE_SHIFT])
+        // Change the lane to the right
+        new_lane = current_lane+LANE_SHIFT;
+      // Check if there is no vehicle on the left side lane of the current lane
+      else if (!lane_occupancy[current_lane-LANE_SHIFT])
+        // Move to the left
+        new_lane = current_lane-LANE_SHIFT;
       else  ref_velocity -= increment_Step; // decrease the speed if no lane change allowed and vehicle in the front
 
     }
 
-    if (current_lane > 1) { // Only left lane change possible
-      // Check if there is no vehicle on the left lane
-      if (!lane_occupancy[current_lane-1])
-        new_lane = current_lane-1;
+    if (current_lane > MIDDLE_LANE) { // Only left lane change possible
+      // Check if there is no vehicle on the left side lane of the current lane
+      if (!lane_occupancy[current_lane-LANE_SHIFT])
+        // Change from current lane to the left lane
+        new_lane = current_lane-LANE_SHIFT;
     }
     else
       ref_velocity -= increment_Step; // decrease the speed if no lane change allowed and vehicle in the front
@@ -382,55 +388,14 @@ int main() {
 
             bool bIsTooClose = false;
 
-/*
-            // Traverse thru all of the vehicles on the road
-            // cout << "Sensor fusion list size = " << returnSensorFusionSize(sensor_fusion) << endl;
-            for (int i = 0; i < sensor_fusion.size(); i++){
-              //Find if each car is in the same lane as this car
-              // Vehicle data id, veh_x, veh_y, vel_x, vel_y, veh_s, veh_d
-              float d = sensor_fusion[i][6];
-
-              // Find the vehicle lane
-              if ((d < (2+4*lane+2)) && (d > (2+4*lane-2))){
-                double vx = sensor_fusion[i][3];
-                double vy = sensor_fusion[i][4];
-                double check_speed = sqrt(vx*vx+vy*vy);
-                double check_car_s = sensor_fusion[i][5];
-
-                // Look into the future where this vehicle will be forward in prev_path_size steps
-                // Simlator goes 50 steps in one sec (1 step  = 1/50 sec)
-                check_car_s += (((double)prev_path_size)*.02*check_speed);
-
-                // Check if s of this vehicle is atleast 30 m from the car_righ
-                if ( (check_car_s > car_s) && (check_car_s-car_s< 30.0)){
-
-                  // Do somethig here, for now reduce the speed
-                  // ref_velocity = 29.5; //mph
-                  bIsTooClose = true;
-
-                  if (lane > 0){
-                    lane = 0;
-                  }
-                }
-              } // Loop to detect if the vehicle is in the same lane as the car
-            }
-
-            // Act on the predctions
-            if (lanes_tracking[lane]){
-              ref_velocity -= increment_Step; //
-            }else if (ref_velocity < (target_velocity-2*increment_Step)){
-              ref_velocity += increment_Step;
-            }
-*/
-            // Predict the lanes occupancy information within 30 m reach
             vector <bool> lanes_tracking = predictCarsInLanes(sensor_fusion, lane, prev_path_size, car_s);
             cout << "Lanes TRacking vector size " << lanes_tracking.size() << " with values " << lanes_tracking[0] << " " <<  lanes_tracking[1] << " " << lanes_tracking[2] << " " << endl;
 
             int new_lane = returnChangedLanewithUpdatedSpeed(lane, lanes_tracking, ref_velocity, target_velocity, increment_Step);
-            if (new_lane != lane)
+            if (new_lane != lane){
               cout << "Lane changed from " << lane << " to " << new_lane << endl;
-
-            lane = new_lane;
+              lane = new_lane;
+            }
 
             if (prev_path_size < 2){
               // Use the two points - one unit forward tangent to the existing car pos, car pos
@@ -541,32 +506,6 @@ int main() {
                 next_y_vals.push_back(y_point);
             }
 
-            /*
-            if(prev_path_size == 0)
-            {
-                pos_x = car_x;
-                pos_y = car_y;
-                angle = deg2rad(car_yaw);
-            }
-            else
-            {
-                pos_x = previous_path_x[prev_path_size-1];
-                pos_y = previous_path_y[prev_path_size-1];
-
-                double pos_x2 = previous_path_x[prev_path_size-2];
-                double pos_y2 = previous_path_y[prev_path_size-2];
-                angle = atan2(pos_y-pos_y2,pos_x-pos_x2);
-            }
-
-            double dist_inc = 0.5;
-            for(int i = 0; i < 50-prev_path_size; i++)
-            {
-                next_x_vals.push_back(pos_x+(dist_inc)*cos(angle+(i+1)*(pi()/100)));
-                next_y_vals.push_back(pos_y+(dist_inc)*sin(angle+(i+1)*(pi()/100)));
-                pos_x += (dist_inc)*cos(angle+(i+1)*(pi()/100));
-                pos_y += (dist_inc)*sin(angle+(i+1)*(pi()/100));
-            }
-            */
           	msgJson["next_x"] = next_x_vals;
           	msgJson["next_y"] = next_y_vals;
 
