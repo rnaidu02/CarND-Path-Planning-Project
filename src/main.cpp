@@ -163,11 +163,20 @@ vector<double> getXY(double s, double d, const vector<double> &maps_s, const vec
 	return {x,y};
 
 }
-/*
+/* Prediction
   * Predict if there are cars within 30m vicinity in left, middle and right predictCarsInLanes
   * 0, 1, 2 index represent Left, Middle and Right lanes respectively
+  *
+  * Input:  sensor_fusion: sensor fusion data from the Simulator
+  *        current_lane: Current lane position (0, 1, 2)
+  *        prev_path_size: the size of prev_path that is not used by the vehicle from prev generated path trajectory
+  *        car_s: s position of the car at the end of the prev_path list
+  *        range: How many meters safe distance the car has to maintain to avoid collision
+  *
+  * Output: returns a vector of size 3 with each element represents the lane and tells if there is a
+  *        vehicle within safe distance
 */
-vector <bool> predictCarsInLanes(const vector<vector<double>> &sensor_fusion, int current_lane, int prev_path_size, double car_s, double range = 30.0){
+vector <bool> predictCarsInLanes(const vector<vector<double>> sensor_fusion, int current_lane, int prev_path_size, double car_s, double range = 30.0){
     std::vector<bool> vResult;
     vResult.push_back(false);
     vResult.push_back(false);
@@ -220,7 +229,24 @@ vector <bool> predictCarsInLanes(const vector<vector<double>> &sensor_fusion, in
     return vResult;
 }
 
-int returnChangedLanewithUpdatedSpeed(int current_lane, vector <bool> &lane_occupancy, double &ref_velocity, double target_velocity, double increment_Step){
+/*  Behavior Planning
+ *  This function takes the current lane position of the car along with lane occupancy of other cars
+ *  within the laes, reference velocity, target velocity, acceleration details and it returns the
+ *  the new lane position if it make any lane change. If the lane is not changed it essentially
+ *  either increases the ref_velocity or decreses the ref_velocity.
+ *
+ *  Input:
+ *          current_lane: current lane position
+ *          lane_occupancy: lane occupany information
+ *          ref_velocity: the current car_speed (mutable)
+ *          target_velocity: the speed limits
+ *          increment_Step: the increment/decrement in speed
+ *  Output:
+ *          returns the updated lane position
+ *
+*/
+
+int returnChangedLanewithUpdatedSpeed(int current_lane, vector <bool> lane_occupancy, double &ref_velocity, double target_velocity, double increment_Step){
   // Act on the predctions
   int new_lane = current_lane;
   const int MIDDLE_LANE = 1;
@@ -260,7 +286,8 @@ int returnChangedLanewithUpdatedSpeed(int current_lane, vector <bool> &lane_occu
     else
       ref_velocity -= increment_Step; // decrease the speed if no lane change allowed and vehicle in the front
 
-  }else if (ref_velocity < (target_velocity-2*increment_Step)){
+  }else // No vehicle in the front, so increase the speed if it is within speed limit
+  if (ref_velocity < (target_velocity-2*increment_Step)){
     ref_velocity += increment_Step;
   }
 
@@ -308,8 +335,8 @@ int main() {
 
   // Ref ref_velocity
   double target_velocity = 50.0;
-  // Increment step of the velocity
-  double increment_Step = 0.224;
+  // Increment step of the velocity (0.224 mph -> results in 5 m/sec^s acceleration)
+  double increment_Step = 0.224*2;
 
   // Have reference velocoty (little less than target velocity of 50 mph)
   // This is essentially 50  -  2 * setp increment in velocity
@@ -323,8 +350,6 @@ int main() {
     //auto sdata = string(data).substr(0, length);
     //cout << sdata << endl;
     // Start the car in lane 1
-
-
 
 
     if (length && length > 2 && data[0] == '4' && data[1] == '2') {
@@ -483,6 +508,7 @@ int main() {
             // Find N points based on the 20 msec interval the simlator sends new waypoints Data
             // 20 msec = 20/1000 sec.
             // mile = 1609.34 m
+            // The higher the velocity, the higher the distance between way points
             double N = target_dist / ((20.0/1000)*ref_velocity*(1609.34/3600));
 
             // Fill the rest of the path Planner points to make it 50 set_points
