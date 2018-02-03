@@ -199,6 +199,7 @@ vector <bool> predictCarsInLanes(const vector<vector<double>> sensor_fusion, int
       // Look into the future where this vehicle will be forward in prev_path_size steps
       // Simlator goes 50 steps in one sec (1 step  = 1/50 sec)
       check_car_s += (((double)prev_path_size)*.02*check_speed);
+      cout << "Inside predictCarsInLanes" << ": prev_path_size: " << prev_path_size << " Distance from the current pos:" << check_car_s << endl;
 
       // for each lane index 0, 1, 2
       for (int j = 0; j < 3; j++){
@@ -260,9 +261,10 @@ int returnChangedLanewithUpdatedSpeed(int current_lane, vector <bool> lane_occup
       if (!lane_occupancy[current_lane+LANE_SHIFT])
         //Change the lane to the right
         new_lane = current_lane+LANE_SHIFT;
+      else
+        ref_velocity -= increment_Step; // decrease the speed if no lane change allowed and vehicle is in the front
     }
-    else
-      ref_velocity -= increment_Step; // decrease the speed if no lane change allowed and vehicle is in the front
+
 
     if (current_lane == MIDDLE_LANE) { // If it is in the middle lane - can change to either lanes
       // Check if there is no vehicle on the right side lane of the current lane
@@ -273,7 +275,8 @@ int returnChangedLanewithUpdatedSpeed(int current_lane, vector <bool> lane_occup
       else if (!lane_occupancy[current_lane-LANE_SHIFT])
         // Move to the left
         new_lane = current_lane-LANE_SHIFT;
-      else  ref_velocity -= increment_Step; // decrease the speed if no lane change allowed and vehicle in the front
+      else
+        ref_velocity -= increment_Step; // decrease the speed if no lane change allowed and vehicle in the front
 
     }
 
@@ -282,9 +285,9 @@ int returnChangedLanewithUpdatedSpeed(int current_lane, vector <bool> lane_occup
       if (!lane_occupancy[current_lane-LANE_SHIFT])
         // Change from current lane to the left lane
         new_lane = current_lane-LANE_SHIFT;
+      else
+        ref_velocity -= increment_Step; // decrease the speed if no lane change allowed and vehicle in the front
     }
-    else
-      ref_velocity -= increment_Step; // decrease the speed if no lane change allowed and vehicle in the front
 
   }else // No vehicle in the front, so increase the speed if it is within speed limit
   if (ref_velocity < (target_velocity-2*increment_Step)){
