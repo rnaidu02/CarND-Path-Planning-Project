@@ -199,7 +199,7 @@ vector <bool> predictCarsInLanes(const vector<vector<double>> sensor_fusion, int
       // Look into the future where this vehicle will be forward in prev_path_size steps
       // Simlator goes 50 steps in one sec (1 step  = 1/50 sec)
       check_car_s += (((double)prev_path_size)*.02*check_speed);
-      cout << "Inside predictCarsInLanes" << ": prev_path_size: " << prev_path_size << " Distance from the current pos:" << check_car_s << endl;
+      // cout << "Inside predictCarsInLanes" << ": prev_path_size: " << prev_path_size << " Distance from the current pos:" << check_car_s << endl;
 
       // for each lane index 0, 1, 2
       for (int j = 0; j < 3; j++){
@@ -310,7 +310,7 @@ int main() {
   // Waypoint map to read from
   string map_file_ = "../data/highway_map.csv";
   // The max s value before wrapping around the track back to 0
-  double max_s = 6945.554;
+  double max_s = 6945.554;  //meters
 
   ifstream in_map_(map_file_.c_str(), ifstream::in);
 
