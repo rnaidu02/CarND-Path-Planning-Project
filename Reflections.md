@@ -45,7 +45,7 @@ Output: returns a vector of size 3 with each element represents the lane and tel
 
 
 ### Behavior planning
-Once the prediction of other vehicles is done wrt occupancy in the lanes, the next step would be to find out what would be the right move for the ego vehicle. In this planning the ego vehicle will decide on whether to be in the same lane and travel at speed limit , or slow down if there is a vehicle in the front and no lane change is possible, or move to either left or right lanes to maintain the speed.
+Once the prediction of other vehicles is done wrt occupancy in the lanes, the next step would be to find out what would be the right move for the ego vehicle. In this planning the ego vehicle will decide on whether to be in the same lane and travel at speed limit , or slow down if there is a vehicle in the front and no lane change is possible, or move to either left or right lanes to maintain the speed. Here the costs for each scenario is not specified, but the logic is sort of prefers one option over the other.
 
 This logic is implemented inside `returnChangedLanewithUpdatedSpeed()` function in `main.cpp (lines 233 - 296)`.
 
@@ -108,6 +108,10 @@ Here is the pseudo code for the Trajectory generation:
   // Increment step of the velocity (0.224 mph -> results in 5 m/sec^s acceleration)
   increment_Step = 0.224*2;
   waypoint_spacing = 30;
+
+  Predict if there are any other vehicles in 3 lanes within a distance of 30m
+
+  Find the speed at which the ego vehicle should go and the lane in which it should be based on the costs associated with each lane change/vehicle presence.   
 
   If prev_path_size is less than 2
     generate two data points based on the current and the car_yaw
